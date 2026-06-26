@@ -31,7 +31,11 @@ export async function createApp(options = {}) {
   app.post('/api/opportunities', (req, res) => {
     const validation = validateOpportunityInput(req.body);
     if (!validation.valid) return send(res, fail('商情表单校验失败', 422, validation.errors));
-    return send(res, ok(store.createOpportunity(req.body), 201));
+    try {
+      return send(res, ok(store.createOpportunity(req.body), 201));
+    } catch (error) {
+      return send(res, fail(error.message, 422));
+    }
   });
 
   app.get('/api/opportunities/:id', (req, res) => {
@@ -43,9 +47,13 @@ export async function createApp(options = {}) {
   app.put('/api/opportunities/:id', (req, res) => {
     const validation = validateOpportunityInput(req.body);
     if (!validation.valid) return send(res, fail('商情表单校验失败', 422, validation.errors));
-    const updated = store.updateOpportunity(req.params.id, req.body);
-    if (!updated) return send(res, fail('商情不存在', 404));
-    return send(res, ok(updated));
+    try {
+      const updated = store.updateOpportunity(req.params.id, req.body);
+      if (!updated) return send(res, fail('商情不存在', 404));
+      return send(res, ok(updated));
+    } catch (error) {
+      return send(res, fail(error.message, 422));
+    }
   });
 
   app.patch('/api/opportunities/:id/status', (req, res) => {
@@ -63,7 +71,11 @@ export async function createApp(options = {}) {
   app.post('/api/visits', (req, res) => {
     const validation = validateVisitInput(req.body);
     if (!validation.valid) return send(res, fail('走访表单校验失败', 422, validation.errors));
-    return send(res, ok(store.createVisit(req.body), 201));
+    try {
+      return send(res, ok(store.createVisit(req.body), 201));
+    } catch (error) {
+      return send(res, fail(error.message, 422));
+    }
   });
 
   app.get('/api/customers', (req, res) => send(res, ok(store.listCustomers(req.query))));

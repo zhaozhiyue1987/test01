@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type DictionaryData } from '../api';
+import { api, type Customer, type DictionaryData } from '../api';
 import { Button, ErrorState, Field, Input, Loading, PageHeader, Panel, Select, Textarea } from '../components/ui';
 
 const emptyForm = {
+  custCode: '',
   custName: '',
   industry: '',
   oppName: '',
@@ -24,6 +25,7 @@ const emptyForm = {
 
 export default function OpportunityFormPage({ id, navigate }: { id?: string; navigate: (path: string) => void }) {
   const [dict, setDict] = useState<DictionaryData | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<Error | null>(null);
   const profitRate = useMemo(() => {
@@ -33,11 +35,30 @@ export default function OpportunityFormPage({ id, navigate }: { id?: string; nav
   }, [form.projInvest, form.proCost]);
 
   useEffect(() => {
-    api.dictionaries().then(setDict).catch(setError);
-    if (id) {
-      api.opportunity(id).then((detail) => {
+    async function load() {
+      try {
+        const [dictionaries, customerResult] = await Promise.all([api.dictionaries(), api.customers()]);
+        setDict(dictionaries);
+        setCustomers(customerResult.items);
+
+        if (!id && customerResult.items[0]) {
+          const customer = customerResult.items[0];
+          setForm((current) => ({
+            ...current,
+            custCode: customer.custCode,
+            custName: customer.custName,
+            industry: customer.industry,
+            contactName: customer.contactName || current.contactName,
+            contactPhone: customer.contactPhone || current.contactPhone,
+          }));
+          return;
+        }
+
+        if (!id) return;
+        const detail = await api.opportunity(id);
         const contact = detail.contacts[0];
         setForm({
+          custCode: detail.opportunity.custCode,
           custName: detail.opportunity.custName,
           industry: detail.opportunity.industry,
           oppName: detail.opportunity.oppName,
@@ -56,11 +77,26 @@ export default function OpportunityFormPage({ id, navigate }: { id?: string; nav
           decisionInflu: contact?.decisionInflu || '',
           contactType: contact?.contactType || '',
         });
-      }).catch(setError);
+      } catch (caught) {
+        setError(caught as Error);
+      }
     }
+    load();
   }, [id]);
 
   function update(key: keyof typeof form, value: string | number) {
+    if (key === 'custCode') {
+      const customer = customers.find((item) => item.custCode === value);
+      setForm((current) => ({
+        ...current,
+        custCode: String(value),
+        custName: customer?.custName || '',
+        industry: customer?.industry || '',
+        contactName: customer?.contactName || current.contactName,
+        contactPhone: customer?.contactPhone || current.contactPhone,
+      }));
+      return;
+    }
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -75,15 +111,25 @@ export default function OpportunityFormPage({ id, navigate }: { id?: string; nav
   }
 
   if (error) return <ErrorState error={error} />;
-  if (!dict) return <Loading />;
+  if (!dict || customers.length === 0) return <Loading />;
 
   return (
     <form onSubmit={submit}>
       <PageHeader title={id ? '编辑商情' : '商情录入'} actions={<><Button variant="secondary" type="button" onClick={() => navigate('/opportunities')}>取消</Button><Button type="submit">保存</Button></>} />
       <div className="form-grid">
         <Panel title="客户信息">
-          <Field label="客户名称" required><Input value={form.custName} onChange={(e) => update('custName', e.target.value)} /></Field>
-          <Field label="行业类型"><Select value={form.industry} onChange={(e) => update('industry', e.target.value)}>{dict.industries.map((item) => <option key={item}>{item}</option>)}</Select></Field>
+          <Field label="选择客户" required>
+            <Select value={form.custCode} onChange={(e) => update('custCode', e.target.value)}>
+              {customers.map((customer) => (
+                <option value={customer.custCode} key={customer.custCode}>
+                  {customer.custName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="客户编号"><Input readOnly value={form.custCode} /></Field>
+          <Field label="客户名称"><Input readOnly value={form.custName} /></Field>
+          <Field label="行业类型"><Input readOnly value={form.industry} /></Field>
         </Panel>
         <Panel title="商机信息">
           <Field label="商机名称" required><Input value={form.oppName} maxLength={50} onChange={(e) => update('oppName', e.target.value)} /></Field>

@@ -49,7 +49,7 @@ describe('validateOpportunityInput', () => {
   it('requires key opportunity fields and validates non-negative amounts', () => {
     const result = validateOpportunityInput({
       oppName: '',
-      custName: '',
+      custCode: '',
       oppRank: '',
       oppType: '',
       projInvest: -1,
@@ -61,7 +61,7 @@ describe('validateOpportunityInput', () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toMatchObject({
       oppName: '商机名称必填',
-      custName: '客户名称必填',
+      custCode: '请选择客户',
       oppRank: '商机等级必填',
       oppType: '商机类型必填',
       projInvest: '预估收入必须大于等于 0',
@@ -75,6 +75,7 @@ describe('validateOpportunityInput', () => {
 describe('validateVisitInput', () => {
   it('requires visit object, time, and purpose', () => {
     const result = validateVisitInput({
+      oppCode: '',
       visitObject: '',
       visitTime: '',
       visitPurpose: '',
@@ -83,6 +84,7 @@ describe('validateVisitInput', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors).toMatchObject({
+      oppCode: '请选择关联商情',
       visitObject: '走访对象必填',
       visitTime: '走访时间必填',
       visitPurpose: '走访目的必填',

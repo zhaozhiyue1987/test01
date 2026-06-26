@@ -231,6 +231,14 @@ export async function createDatabase(options = {}) {
     );
   }
 
+  function findCustomerByCode(custCode) {
+    return getCustomer(custCode);
+  }
+
+  function findOpportunityByCode(oppCode) {
+    return getOpportunityRows().find((item) => item.oppCode === oppCode) || null;
+  }
+
   function createCustomer(input) {
     const next = one(db, 'SELECT COUNT(*) + 1 AS next FROM customer').next;
     const custCode = input.custCode || createCode('CU', next);
@@ -256,16 +264,8 @@ export async function createDatabase(options = {}) {
   }
 
   function createOpportunity(input) {
-    let customer = findCustomerByName(input.custName);
-    if (!customer) {
-      customer = createCustomer({
-        custName: input.custName,
-        industry: input.industry || '',
-        province: input.province || '',
-        contactName: input.contactName || '',
-        contactPhone: input.contactPhone || '',
-      });
-    }
+    const customer = findCustomerByCode(input.custCode);
+    if (!customer) throw new Error('客户不存在，请先选择有效客户');
     const createDate = input.createDate || nowIso();
     run(
       db,
@@ -279,11 +279,11 @@ export async function createDatabase(options = {}) {
         ':oppStatus': input.oppStatus || '10',
         ':oppType': input.oppType,
         ':oppRank': input.oppRank,
-        ':industry': input.industry || customer.industry || '',
+        ':industry': customer.industry || '',
         ':oppDesc': input.oppDesc || '',
         ':custRelation': input.custRelation || '',
         ':custCode': customer.custCode,
-        ':custName': input.custName,
+        ':custName': customer.custName,
         ':createName': input.createName || '客户经理',
         ':createDate': createDate,
       }
@@ -331,19 +331,24 @@ export async function createDatabase(options = {}) {
   function updateOpportunity(oppId, input) {
     const existing = getOpportunity(oppId).opportunity;
     if (!existing) return null;
+    const customer = findCustomerByCode(input.custCode);
+    if (!customer) throw new Error('客户不存在，请先选择有效客户');
     run(
       db,
       `UPDATE opp SET opp_name = :oppName, opp_type = :oppType, opp_rank = :oppRank,
-        indus_belong = :industry, opp_desc = :oppDesc, cust_relation = :custRelation
+        indus_belong = :industry, opp_desc = :oppDesc, cust_relation = :custRelation,
+        cust_code = :custCode, cust_name = :custName
        WHERE opp_id = :oppId`,
       {
         ':oppId': oppId,
         ':oppName': input.oppName,
         ':oppType': input.oppType,
         ':oppRank': input.oppRank,
-        ':industry': input.industry || '',
+        ':industry': customer.industry || '',
         ':oppDesc': input.oppDesc || '',
         ':custRelation': input.custRelation || '',
+        ':custCode': customer.custCode,
+        ':custName': customer.custName,
       }
     );
     run(
@@ -420,6 +425,8 @@ export async function createDatabase(options = {}) {
   }
 
   function createVisit(input) {
+    const opportunity = findOpportunityByCode(input.oppCode);
+    if (!opportunity) throw new Error('关联商情不存在，请先选择有效商情');
     const next = one(db, 'SELECT COUNT(*) + 1 AS next FROM visit').next;
     const visitId = input.visitId || createCode('VI', next);
     run(
@@ -432,7 +439,7 @@ export async function createDatabase(options = {}) {
       {
         ':visitId': visitId,
         ':oppCode': input.oppCode || '',
-        ':custName': input.custName || '',
+        ':custName': opportunity.custName,
         ':visitObject': input.visitObject,
         ':visitTime': input.visitTime,
         ':visitPurpose': input.visitPurpose,
@@ -652,6 +659,7 @@ export async function createDatabase(options = {}) {
     createOpportunity,
     updateOpportunity,
     getOpportunity,
+    findOpportunityByCode,
     updateOpportunityStatus,
     listVisits,
     createVisit,

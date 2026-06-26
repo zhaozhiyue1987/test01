@@ -56,7 +56,8 @@ export default function VisitFormPage({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
-      await api.createVisit({ ...form, photos });
+      const { custName: _custName, ...payload } = form;
+      await api.createVisit({ ...payload, photos });
       navigate('/visits');
     } catch (caught) {
       setError(caught as Error);
@@ -75,7 +76,7 @@ export default function VisitFormPage({
         <Panel title="基本信息">
           <Field label="关联商情">
             <Select disabled={readonlyLinked} value={form.oppCode} onChange={(event) => update('oppCode', event.target.value)}>
-              {opportunities.map((item) => <option value={item.oppCode} key={item.oppCode}>{item.oppName}</option>)}
+              {opportunities.map((item) => <option value={item.oppCode} key={item.oppCode}>{item.oppName} / {item.custName}</option>)}
             </Select>
           </Field>
           <Field label="走访客户"><Input readOnly value={form.custName} /></Field>

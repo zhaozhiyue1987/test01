@@ -40,7 +40,7 @@ export function transitionStatus(currentStatus, action) {
 export function validateOpportunityInput(input = {}) {
   const errors = {};
   if (!input.oppName?.trim()) errors.oppName = '商机名称必填';
-  if (!input.custName?.trim()) errors.custName = '客户名称必填';
+  if (!input.custCode?.trim()) errors.custCode = '请选择客户';
   if (!input.oppRank) errors.oppRank = '商机等级必填';
   if (!input.oppType) errors.oppType = '商机类型必填';
   if (Number(input.projInvest) < 0) errors.projInvest = '预估收入必须大于等于 0';
@@ -54,6 +54,7 @@ export function validateOpportunityInput(input = {}) {
 
 export function validateVisitInput(input = {}) {
   const errors = {};
+  if (!input.oppCode?.trim()) errors.oppCode = '请选择关联商情';
   if (!input.visitObject?.trim()) errors.visitObject = '走访对象必填';
   if (!input.visitTime) errors.visitTime = '走访时间必填';
   if (!input.visitPurpose?.trim()) errors.visitPurpose = '走访目的必填';

@@ -31,11 +31,15 @@ describe('opportunity APIs', () => {
   });
 
   it('creates an opportunity and calculates profit rate', async () => {
+    const customers = await request(app).get('/api/customers?keyword=云启科技').expect(200);
+    const customer = customers.body.data.items[0];
+
     const response = await request(app)
       .post('/api/opportunities')
       .send({
-        custName: '测试科技有限公司',
-        industry: '互联网',
+        custCode: customer.custCode,
+        custName: '不应使用的手填客户名',
+        industry: '不应使用的手填行业',
         oppName: '测试专线扩容项目',
         oppRank: '2',
         oppType: '专线',
@@ -57,6 +61,28 @@ describe('opportunity APIs', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data.oppStatus).toBe('10');
     expect(response.body.data.profitRate).toBe(40);
+    expect(response.body.data.custCode).toBe(customer.custCode);
+    expect(response.body.data.custName).toBe(customer.custName);
+    expect(response.body.data.industry).toBe(customer.industry);
+  });
+
+  it('rejects opportunity creation when customer code is not bound to an existing customer', async () => {
+    const response = await request(app)
+      .post('/api/opportunities')
+      .send({
+        custCode: 'CU-NOT-FOUND',
+        oppName: '无效客户商情',
+        oppRank: '2',
+        oppType: '专线',
+        projInvest: 200000,
+        proCost: 120000,
+        contactName: '赵经理',
+        contactPhone: '13800138000',
+      })
+      .expect(422);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe('客户不存在，请先选择有效客户');
   });
 
   it('returns opportunity detail and transitions status', async () => {
@@ -85,7 +111,7 @@ describe('visit APIs', () => {
       .post('/api/visits')
       .send({
         oppCode: opportunity.oppCode,
-        custName: opportunity.custName,
+        custName: '不应使用的手填客户名',
         visitObject: '王总',
         visitTime: '2026-06-26',
         visitPurpose: '沟通报价和施工窗口',
@@ -99,6 +125,22 @@ describe('visit APIs', () => {
 
     const response = await request(app).get('/api/visits').expect(200);
     expect(response.body.data.items.some((item) => item.custName === opportunity.custName)).toBe(true);
+    expect(response.body.data.items.some((item) => item.custName === '不应使用的手填客户名')).toBe(false);
+  });
+
+  it('rejects visit creation when opportunity code is not bound to an existing opportunity', async () => {
+    const response = await request(app)
+      .post('/api/visits')
+      .send({
+        oppCode: 'OP-NOT-FOUND',
+        visitObject: '王总',
+        visitTime: '2026-06-26',
+        visitPurpose: '沟通报价和施工窗口',
+      })
+      .expect(422);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe('关联商情不存在，请先选择有效商情');
   });
 });
 
